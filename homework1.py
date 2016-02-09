@@ -16,17 +16,13 @@
 #
 import webapp2
 
-# use for escaping html chars
 import cgi
 
 form="""
-<form style="line-height: 30px" method="post">
-	<strong>Sign up:</strong>
+<form method="post">
+	Enter some ROT13 test:
 	<br>
-	<label>Name: <input type="text" name="username" value="%(username)s"></label><br>
-	<label>Password: <input type="password" name="password" value="%(password)s"></label><br>
-	<label>Verify Password: <input type="password" name="verify" value="%(verify)s"></label><br>
-	<label>Email: <input type="text" name="email" value="%(email)s"></label>
+	<textarea type="textarea" style="width: 500px" rows="20" name="text" value="%(text)s">%(text)s</textarea>
 	<br>
 	<input type="submit">
 </form>
@@ -50,41 +46,27 @@ def valid_text(text):
 				string = string + escape_html(char)
 	return string
 
+
+chars = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+
 def escape_html(s):
     return cgi.escape(s, quote = True)
 
 class MainHandler(webapp2.RequestHandler):
-	def write_form(self, username="", password="", verify="", email=""):
-		self.response.out.write(form % {"username": username, "password": password, "verify": verify, "email": email})
+	def write_form(self, text=""):
+		self.response.out.write(form % {"text": text})
 
 	def get(self):
 		self.write_form()
 
 	def post(self):
-		user_username = self.request.get('username')
-		user_password = self.request.get('password')
-		user_verify = self.request.get('verify')
-		user_email = self.request.get('email')
+		user_text = self.request.get('text')
 
-		username = valid_text(user_username)
-		password = valid_text(user_password)
-		verify = valid_text(user_verify)
-		email = valid_text(user_email)
+		text = valid_text(user_text)
 
 		self.write_form(text)
 
-		if not (username and password and verify):
-			self.write_form('sorry invalid stuff', user_username, user_password)
-		else:
-			self.redirect('/thanks')
 
-class ThanksHandler(webapp2.RequestHandler):
-	def get(self, username=""):
-		name = self.request.get("username")
-		self.response.out.write("Welcome, " + name)
-
-# this is the router
 app = webapp2.WSGIApplication([
-	('/', MainHandler),
-	('/thanks', ThanksHandler)
+	('/', MainHandler)
 ], debug=True)

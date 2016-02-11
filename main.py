@@ -41,30 +41,48 @@ form="""
 """
 def valid_name(text):
 	if text:
+		# test = USER_RE.match(text)
+		# print type(test)
 		return USER_RE.match(text)
 
-def valid_password(text):
-	if text:
-		return PASSWORD_RE.match(text)
+# def valid_password(text):
+# 	if text:
+# 		return PASSWORD_RE.match(text)
 
-def valid_verify(passorverify, passw, verify):
-	if passorverify == "passw":
-		isValid = PASSWORD_RE.match(passw)
-		if not (isValid):
-			return "Please enter a password."
-		elif passw != verify:
-			return "Passwords do not match. Enter matching password below"
-		else:
-			return ""
+def valid_password(passw):
+		return PASSWORD_RE.match(passw)
+		# if not (isValid):
+		# 	return "That is not a valid password."
 
-	elif passorverify == "verify":
-		isValid = PASSWORD_RE.match(verify)
-		if not (isValid):
-			return "Please enter a matching password."
-		elif passw != verify:
-			return "Passwords do not match. Enter a valid password."
-		else:
-			return ""
+def valid_verify(passw, verify):
+		print passw
+		print verify
+		if (passw):
+			if (passw == verify):
+				return True
+			else:
+				return False
+
+# def valid_verify(passorverify, passw, verify):
+# 	if passorverify == "passw":
+# 		isValid = PASSWORD_RE.match(passw)
+# 		print type(isValid)
+# 		if (isValid):
+# 			return False
+# 		if passw != verify:
+# 			return "Passwords do not match. Enter matching password below"
+# 		else:
+# 			return "Please enter a password."
+# 			# print "return false"
+
+# 	if passorverify == "verify":
+# 		print passorverify
+# 		# print verify
+# 		if (passw != verify):
+# 			return "Passwords do not match. Enter a valid password."
+# 		else:
+# 			print "return false"
+# 			return False
 
 
 def valid_email(email):
@@ -97,18 +115,18 @@ class MainHandler(webapp2.RequestHandler):
 		user_email = self.request.get('email')
 
 		username = valid_name(user_username)
-		password = valid_verify("passw", user_password, user_verify)
-		verify = valid_verify("verify", user_password, user_verify)
+		password = valid_password(user_password)
+		verify = valid_verify(user_password, user_verify)
 		email = valid_email(user_email)
 		print(email)
 
 		user_error = "That's not a valid username." if not username else ""
-		pass_error = password
-		verify_error = verify
+		pass_error = "That's not a valid password." if not password else ""
+		verify_error = "Passwords do not match." if not verify else ""
 		email_error = "That's not a valid email address." if not email else ""
 
 
-		if (not username) or (not user_password) or (not user_verify):
+		if not (username and password and verify):
 			self.write_form(
 				user_error, user_username,
 				pass_error,

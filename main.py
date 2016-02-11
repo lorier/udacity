@@ -32,9 +32,9 @@ form="""
 	<strong>Sign up:</strong>
 	<br>
 	<label>Username: <input type="text" name="username" value="%(username)s"> <span style="color: red">%(name_error)s</span></label><br>
-	<label>Password: <input type="password" name="password">  <span style="color: red">%(pass_error)s</span></label><br> 
-	<label>Verify Password: <input type="password" name="verify">  <span style="color: red">%(verify_error)s</span></label><br> 
-	<label>Email: <input type="text" name="email" value="%(email)s"> <span style="color: red">%(email_error)s</span></label> 
+	<label>Password: <input type="password" name="password">  <span style="color: red">%(pass_error)s</span></label><br>
+	<label>Verify Password: <input type="password" name="verify">  <span style="color: red">%(verify_error)s</span></label><br>
+	<label>Email: <input type="text" name="email" value="%(email)s"> <span style="color: red">%(email_error)s</span></label>
 	<br>
 	<input type="submit">
 </form>
@@ -68,9 +68,11 @@ def valid_verify(passorverify, passw, verify):
 
 
 def valid_email(email):
-	if email:
+	if email == "":
+		return True
+	else:
 		return EMAIL_RE.match(email)
-		print email
+
 
 def escape_html(s):
     return cgi.escape(s, quote = True)
@@ -79,7 +81,7 @@ class MainHandler(webapp2.RequestHandler):
 	def write_form(self, name_error="", username="", pass_error="", verify_error="", email_error="", email=""):
 		self.response.out.write(form % {
 			"name_error": name_error,
-			"username": username, 
+			"username": username,
 			"pass_error": pass_error,
 			"verify_error": verify_error,
 			"email_error": email_error,
@@ -106,10 +108,10 @@ class MainHandler(webapp2.RequestHandler):
 		email_error = "That's not a valid email address." if not email else ""
 
 
-		if (not username) or (not user_password) or (not user_verify) or (not user_email):
+		if (not username) or (not user_password) or (not user_verify):
 			self.write_form(
 				user_error, user_username,
-				pass_error, 
+				pass_error,
 				verify_error,
 				email_error, user_email
 				)

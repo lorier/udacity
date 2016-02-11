@@ -19,43 +19,71 @@ import webapp2
 # use for escaping html chars
 import cgi
 
+#import regular expressions
+import re
+
+#regular expression constants
+USER_RE = re.compile("^[a-zA-Z0-9_-]{3,20}$")
+PASSWORD_RE = re.compile("^.{3,20}$")
+EMAIL_RE = re.compile("^[\S]+@[\S]+\.[\S]+$")
+
 form="""
 <form style="line-height: 30px" method="post">
 	<strong>Sign up:</strong>
 	<br>
-	<label>Name: <input type="text" name="username" value="%(username)s"></label><br>
-	<label>Password: <input type="password" name="password" value="%(password)s"></label><br>
-	<label>Verify Password: <input type="password" name="verify" value="%(verify)s"></label><br>
-	<label>Email: <input type="text" name="email" value="%(email)s"></label>
+	<label>Username: <input type="text" name="username" value="%(username)s"> <span style="color: red">%(name_error)s</span></label><br>
+	<label>Password: <input type="password" name="password">  <span style="color: red">%(pass_error)s</span></label><br> 
+	<label>Verify Password: <input type="password" name="verify">  <span style="color: red">%(verify_error)s</span></label><br> 
+	<label>Email: <input type="text" name="email" value="%(email)s"> <span style="color: red">%(email_error)s</span></label> 
 	<br>
 	<input type="submit">
 </form>
 """
-def valid_text(text):
-	string = ""
+def valid_name(text):
 	if text:
-		for char in text:
-			isCap = char.isupper()
-			if char.isalpha():
-				char = char.lower()
-				index = chars.index(char)
-				newIndex = (index+13) % len(chars)
-				char = chars[newIndex]
-				if isCap:
-					char = char.capitalize()
-				string = string + char
-			elif char.isdigit() or char == " " or char == '"' or char == "'":
-				string = string + char
-			else:
-				string = string + escape_html(char)
-	return string
+		return USER_RE.match(text)
+
+def valid_password(text):
+	if text:
+		return PASSWORD_RE.match(text)
+
+def valid_verify(passorverify, passw, verify):
+	if passorverify == "passw":
+		isValid = PASSWORD_RE.match(passw)
+		if not (isValid):
+			return "Please enter a password."
+		elif passw != verify:
+			return "Passwords do not match. Enter matching password below"
+		else:
+			return ""
+
+	elif passorverify == "verify":
+		isValid = PASSWORD_RE.match(verify)
+		if not (isValid):
+			return "Please enter a matching password."
+		elif passw != verify:
+			return "Passwords do not match. Enter a valid password."
+		else:
+			return ""
+
+
+def valid_email(email):
+	if email:
+		return EMAIL_RE.match(email)
+		print email
 
 def escape_html(s):
     return cgi.escape(s, quote = True)
 
 class MainHandler(webapp2.RequestHandler):
-	def write_form(self, username="", password="", verify="", email=""):
-		self.response.out.write(form % {"username": username, "password": password, "verify": verify, "email": email})
+	def write_form(self, name_error="", username="", pass_error="", verify_error="", email_error="", email=""):
+		self.response.out.write(form % {
+			"name_error": name_error,
+			"username": username, 
+			"pass_error": pass_error,
+			"verify_error": verify_error,
+			"email_error": email_error,
+			"email": email})
 
 	def get(self):
 		self.write_form()
@@ -66,22 +94,32 @@ class MainHandler(webapp2.RequestHandler):
 		user_verify = self.request.get('verify')
 		user_email = self.request.get('email')
 
-		username = valid_text(user_username)
-		password = valid_text(user_password)
-		verify = valid_text(user_verify)
-		email = valid_text(user_email)
+		username = valid_name(user_username)
+		password = valid_verify("passw", user_password, user_verify)
+		verify = valid_verify("verify", user_password, user_verify)
+		email = valid_email(user_email)
+		print(email)
 
-		self.write_form(text)
+		user_error = "That's not a valid username." if not username else ""
+		pass_error = password
+		verify_error = verify
+		email_error = "That's not a valid email address." if not email else ""
 
-		if not (username and password and verify):
-			self.write_form('sorry invalid stuff', user_username, user_password)
+
+		if (not username) or (not user_password) or (not user_verify) or (not user_email):
+			self.write_form(
+				user_error, user_username,
+				pass_error, 
+				verify_error,
+				email_error, user_email
+				)
 		else:
-			self.redirect('/thanks')
+			self.redirect('/thanks?q=' +  username.group(0))
 
 class ThanksHandler(webapp2.RequestHandler):
-	def get(self, username=""):
-		name = self.request.get("username")
-		self.response.out.write("Welcome, " + name)
+	def get(self):
+		q = self.request.get("q")
+		self.response.out.write("Welcome, " + q + "!")
 
 # this is the router
 app = webapp2.WSGIApplication([

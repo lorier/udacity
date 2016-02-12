@@ -31,66 +31,32 @@ form="""
 <form style="line-height: 30px" method="post">
 	<strong>Sign up:</strong>
 	<br>
-	<label>Username: <input type="text" name="username" value="%(username)s"> <span style="color: red">%(name_error)s</span></label><br>
-	<label>Password: <input type="password" name="password">  <span style="color: red">%(pass_error)s</span></label><br>
-	<label>Verify Password: <input type="password" name="verify">  <span style="color: red">%(verify_error)s</span></label><br>
-	<label>Email: <input type="text" name="email" value="%(email)s"> <span style="color: red">%(email_error)s</span></label>
+	<label>Username <input type="text" name="username" value="%(username)s"> <span style="color: red">%(name_error)s</span></label><br>
+	<label>Password <input type="password" name="password">  <span style="color: red">%(pass_error)s</span></label><br>
+	<label>Verify Password <input type="password" name="verify">  <span style="color: red">%(verify_error)s</span></label><br>
+	<label>Email (optional) <input type="text" name="email" value="%(email)s"> <span style="color: red">%(email_error)s</span></label>
 	<br>
 	<input type="submit">
 </form>
 """
 def valid_name(text):
-	if text:
-		# test = USER_RE.match(text)
-		# print type(test)
-		return USER_RE.match(text)
-
-# def valid_password(text):
-# 	if text:
-# 		return PASSWORD_RE.match(text)
+	return USER_RE.match(text)
 
 def valid_password(passw):
-		return PASSWORD_RE.match(passw)
-		# if not (isValid):
-		# 	return "That is not a valid password."
+	return PASSWORD_RE.match(passw)
 
 def valid_verify(passw, verify):
-		print passw
-		print verify
-		if (passw):
-			if (passw == verify):
-				return True
-			else:
-				return False
-
-# def valid_verify(passorverify, passw, verify):
-# 	if passorverify == "passw":
-# 		isValid = PASSWORD_RE.match(passw)
-# 		print type(isValid)
-# 		if (isValid):
-# 			return False
-# 		if passw != verify:
-# 			return "Passwords do not match. Enter matching password below"
-# 		else:
-# 			return "Please enter a password."
-# 			# print "return false"
-
-# 	if passorverify == "verify":
-# 		print passorverify
-# 		# print verify
-# 		if (passw != verify):
-# 			return "Passwords do not match. Enter a valid password."
-# 		else:
-# 			print "return false"
-# 			return False
-
+	if (passw and verify):
+		if (verify == passw):
+			return True
+		else:
+			return False
 
 def valid_email(email):
 	if email == "":
 		return True
 	else:
 		return EMAIL_RE.match(email)
-
 
 def escape_html(s):
     return cgi.escape(s, quote = True)
@@ -109,32 +75,35 @@ class MainHandler(webapp2.RequestHandler):
 		self.write_form()
 
 	def post(self):
+		#get data from the forms
 		user_username = self.request.get('username')
 		user_password = self.request.get('password')
 		user_verify = self.request.get('verify')
 		user_email = self.request.get('email')
 
+		#test the data and get data (true) or None
 		username = valid_name(user_username)
 		password = valid_password(user_password)
 		verify = valid_verify(user_password, user_verify)
 		email = valid_email(user_email)
-		print(email)
 
+		#if test gives us None, assing an error string. If test gives us good data, assign an empty string
 		user_error = "That's not a valid username." if not username else ""
 		pass_error = "That's not a valid password." if not password else ""
 		verify_error = "Passwords do not match." if not verify else ""
 		email_error = "That's not a valid email address." if not email else ""
 
-
-		if not (username and password and verify):
+		#if there are any errors, write them
+		if (user_error or pass_error or verify_error or email_error):
 			self.write_form(
 				user_error, user_username,
 				pass_error,
 				verify_error,
 				email_error, user_email
 				)
+		#else, redirect to a welcome screen along with the regex sanitized username
 		else:
-			self.redirect('/thanks?q=' +  username.group(0))
+			self.redirect('/welcom?q=' +  username.group(0))
 
 class ThanksHandler(webapp2.RequestHandler):
 	def get(self):
@@ -144,5 +113,5 @@ class ThanksHandler(webapp2.RequestHandler):
 # this is the router
 app = webapp2.WSGIApplication([
 	('/', MainHandler),
-	('/thanks', ThanksHandler)
+	('/welcom', ThanksHandler)
 ], debug=True)

@@ -1,0 +1,23 @@
+{% extends "front.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+		<article>
+                <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+					<h1>{{entry.subject}}</h1>
+					<h4>{{entry.created.strftime('%b %d, %Y')}}</h4>
+					<div>{{entry.content}}</div>
+           		</div>
+		</article>
+	</div>
+	<div class="row">
+	<div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+	<br><br>
+		<a href="/" class="btn btn-primary">See all posts</a>
+	</div>
+	</div>
+   </div>
+</div>
+
+{% endblock %}

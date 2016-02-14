@@ -1,0 +1,38 @@
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>Udacity Shopping List</title>
+</head>
+<body>
+	<h1>Udacity Templates</h1>
+
+	<!-- {% block content %}
+	{% endblock %} -->
+	<form method="post">
+		<label for="">
+			<div>title</div>
+			<input type="text" name="title" value="{{title}}">
+		</label>
+		<label>
+			<div>art</div>
+			<textarea name="art" id="" cols="30" rows="10">{{art}}</textarea>
+		</label>
+		<br>
+		<div class="error">
+			{{error}}
+		</div>
+		<input type="submit" value="Submit">
+		</form>
+		<hr>
+		{% for art in arts %}
+		<div class="art">
+			<div class="art-title">
+				{{art.title}}
+			</div>
+			<pre>
+				{{art.art}}
+			</pre>
+		</div>
+		{% endfor %}
+</body>
+</html>

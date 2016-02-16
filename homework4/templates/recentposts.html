@@ -1,0 +1,27 @@
+{% extends "front.html" %}
+
+{% block content %}
+<div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+
+<h1>Recent Posts</h1>
+
+{% for entry in entries %}
+	{% if loop.index < 10 %}
+		<div class="post-preview">
+			<a href="{{entry.key().id()}}">
+				<h2 class="post-title">
+					{{entry.subject}}
+				</h2>
+				<h5>{{entry.created.strftime('%b %d, %Y')}}</h5>
+
+				<div class="post">
+					{{entry.content}}
+				</div>
+			</a>
+		</div>
+		{% endif %}
+	{% endfor %}
+</div></div></div>
+{% endblock %}

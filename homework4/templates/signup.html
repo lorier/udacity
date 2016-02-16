@@ -1,0 +1,25 @@
+{% extends "front.html" %}
+
+{% block content %}
+<div class="container">
+	<div class="row" style="border-bottom: 5px solid gray">
+		<div>
+			<h1 style="display: inline-block">Sign up for Lorie's Blog</h1>
+			<form action="" method="post">
+				<strong>Sign up:</strong>
+				<br>
+				<label>Username
+					<input type="text" name="username" value="{{username}}"> <span style="color: red">{{name_error}}</span></label><br>
+				<label>Password
+					<input type="password" name="password">  <span style="color: red">{{pass_error}}</span></label><br>
+				<label>Verify Password
+					<input type="password" name="verify">  <span style="color: red">{{verify_error}}</span></label><br>
+				<label>Email (optional)
+					<input type="text" name="email" value="{{error}}"> <span style="color: red">{{email_error}}</span></label>
+				<br>
+				<input type="submit">
+			</form>
+		</div>
+	</div>
+</div>
+{% endblock %}

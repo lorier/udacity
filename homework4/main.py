@@ -15,60 +15,17 @@ jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
 								autoescape = True)
 # use autoescape to opt into escaping variables. Saves you from security holes if you don't filter
 # variables in your templates with '| safe' or '| escape'
+#
 
-SECRET = 'mysecret'
+
+#####
+##### Password Validation
+#####
 
 #regular expression constants
 USER_RE = re.compile("^[a-zA-Z0-9_-]{3,20}$")
 PASSWORD_RE = re.compile("^.{3,20}$")
 EMAIL_RE = re.compile("^[\S]+@[\S]+\.[\S]+$")
-
-def hash_str(s):
-	return hmac.new(SECRET, s).hexdigest()
-
-def make_secure_val(s):
-	return str(s) + '|' + hash_str(s)
-
-def check_secure_val(h):
-	val = h.split('|')[0]
-	if h == make_secure_val(val):
-		return val
-
-
-def make_salt():
-    return ''.join(random.choice(string.letters) for x in xrange(5))
-
-# Implement the function valid_pw() that returns True if a user's password
-# matches its hash. You will need to modify make_pw_hash.
-
-def make_pw_hash(name, pw, salt = None):
-	if not salt:
-		salt = make_salt()
-	h = hashlib.sha256(name + pw + salt).hexdigest()
-	return '%s,%s' % (h, salt)
-
-def valid_pw(name, pw, h):
-	###Your code here
-	salt = h.split(',')[1]
-	return h == make_pw_hash(name, pw, salt)
-
-
-# class Handler(webapp2.RequestHandler):
-
-# 	# create a shorthand for writing responses
-# 	def write(self, *a, **kw):
-# 		self.response.out.write(*a, **kw)
-
-# 	# **params is the python syntax for extra parameters
-# 	# 't.render' is a jinja function
-# 	def render_str(self, template, **params):
-# 		t = jinja_env.get_template(template)
-# 		return t.render(params)
-
-# 	def render(self, template, **kw):
-# 		self.write(self.render_str(template,**kw))
-
-
 
 def valid_name(text):
 	return USER_RE.match(text)
@@ -91,7 +48,6 @@ def valid_email(email):
 
 def escape_html(s):
 	return cgi.escape(s, quote = True)
-
 
 class Handler(webapp2.RequestHandler):
 
@@ -154,35 +110,88 @@ class SignupHandler(Handler):
 				)
 		#else, redirect to a welcome screen along with the regex sanitized username
 		else:
+			#encode cookie
+			self.response.headers['Content-Type'] = 'text/plain'
+
+			user_id = str(make_pw_hash(user_username, user_password))
+			print user_id
+
+			# self.response.headers.add_header('Set-Cookie', 'visits=%s' % new_cookie_val)
+			self.response.headers.add_header('Set-Cookie', 'user-id=%s; Path=/' % user_id)
 			self.redirect('/welcome')
 
 class WelcomeHandler(Handler):
 	def get(self):
-		self.render("welcome.html")
+		#decode cookie
+		user_cookie_str = self.request.cookies.get('user-id')
+		print user_cookie_str
+		if user_cookie_str:
+			cookie_val = check_secure_val(user_cookie_str)
+			# print cookie_val
+			if cookie_val:
+				user = cookie_val
+				msg = "Welcome, %s" % user
+				#pass username to template
+			else:
+				msg = "Whoops, something went wrong"
+			self.render("welcome.html", msg=msg)
+		else:
+			self.redirect('/signup')
+
+
+#####
+##### Hashing Functions
+#####
+
+SECRET = 'mysecret'
+
+def hash_str(s):
+	return hmac.new(SECRET, s).hexdigest()
+
+def make_secure_val(s):
+	return str(s) + '|' + hash_str(s)
+
+def make_salt():
+    return ''.join(random.choice(string.letters) for x in xrange(5))
+
+def check_secure_val(h):
+	val = h.split('|')[0]
+	if h == make_secure_val(val):
+		return val
+
+def make_pw_hash(name, pw, salt = None):
+	if not salt:
+		salt = make_salt()
+	h = hashlib.sha256(name + pw + salt).hexdigest()
+	return '%s|%s' % (name, h)
+
+def valid_pw(name, pw, h):
+	salt = h.split('|')[1]
+	return h == make_pw_hash(name, pw, salt)
+
 
 class CookieHandler(Handler):
-	# def render_front(self, subject="", content="", created=""):
-	# 	self.render("recentposts.html", subject=subject, content=content, created=created, entries=entries)
 
 	def get(self):
-		# self.response.headers['Content-Type'] = 'text/plain'
-		# visits = 0
-		# visit_cookie_str = self.request.cookies.get('visits')
-		# if visit_cookie_str:
-		# 	cookie_val = check_secure_val(visit_cookie_str)
-		# 	if cookie_val:
-		# 		visits = int(cookie_val)
+		self.response.headers['Content-Type'] = 'text/plain'
+		visits = 0
+		visit_cookie_str = self.request.cookies.get('visits')
+		if visit_cookie_str:
+			cookie_val = check_secure_val(visit_cookie_str)
+			if cookie_val:
+				visits = int(cookie_val)
 
-		# visits += 1
+		visits += 1
 
-		# new_cookie_val = make_secure_val(str(visits))
+		new_cookie_val = make_secure_val(str(visits))
 
-		# self.response.headers.add_header('Set-Cookie', 'visits=%s' % new_cookie_val)
-		# self.write("you've been here %s times!" % visits)
+		self.response.headers.add_header('Set-Cookie', 'visits=%s' % new_cookie_val)
+		self.write("you've been here %s times!" % visits)
 		self.write("you've been here 0 times!")
 
-#################
-
+#####
+##### Blog Pages
+#####
 
 class Entry(db.Model):
 	subject = db.StringProperty(required = True)

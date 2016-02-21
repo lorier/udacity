@@ -26,6 +26,8 @@ jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
 USER_RE = re.compile("^[a-zA-Z0-9_-]{3,20}$")
 PASSWORD_RE = re.compile("^.{3,20}$")
 EMAIL_RE = re.compile("^[\S]+@[\S]+\.[\S]+$")
+COOKIE_RE = re.compile(r'.+=;\s*Path=/')
+
 
 def valid_name(text):
 	return USER_RE.match(text)
@@ -95,7 +97,18 @@ class SignupHandler(Handler):
 		email = valid_email(user_email)
 
 		#if test gives us None, assing an error string. If test gives us good data, assign an empty string
-		name_error = "That's not a valid username." if not username else ""
+		user_cookie_str = self.request.cookies.get('name')
+		name_error = ""
+
+		if not username:
+			name_error = "That's not a valid username."
+		if user_cookie_str:
+			# print "username: " + username
+			# print "get user: " + get_user(user_cookie_str)
+			if user_username == get_user(user_cookie_str):
+				name_error = "You've already signed up"
+
+		# name_error = "That's not a valid username." if not username else ""
 		pass_error = "That's not a valid password." if not password else ""
 		verify_error = "Passwords do not match." if not verify else ""
 		email_error = "That's not a valid email address." if not email else ""
@@ -106,7 +119,7 @@ class SignupHandler(Handler):
 				name_error, user_username,
 				pass_error,
 				verify_error,
-				email_error, email
+				email_error, user_email
 				)
 		#else, redirect to a welcome screen along with the regex sanitized username
 		else:
@@ -114,30 +127,59 @@ class SignupHandler(Handler):
 			self.response.headers['Content-Type'] = 'text/plain'
 
 			user_id = str(make_pw_hash(user_username, user_password))
-			print user_id
 
 			# self.response.headers.add_header('Set-Cookie', 'visits=%s' % new_cookie_val)
-			self.response.headers.add_header('Set-Cookie', 'user-id=%s; Path=/' % user_id)
+			self.response.headers.add_header('Set-Cookie', 'name=%s; Path=/' % user_id)
 			self.redirect('/welcome')
+
+class LoginHandler(Handler):
+	def render_form(self, invalid_login=""):
+		self.render("login.html", invalid_login=invalid_login)
+
+	def get(self):
+		self.render_form()
+
+	def post(self):
+		#get data from the forms
+		user_username = self.request.get('username')
+		user_password = self.request.get('password')
+
+		#if test gives us None, assing an error string. If test gives us good data, assign an empty string
+		user_cookie_str = self.request.cookies.get('name')
+
+		invalid_login = ""
+		if user_cookie_str:
+			if not valid_pw(user_username, user_password, user_cookie_str):
+				invalid_login = "Invalid Login"
+
+		if (invalid_login):
+		#if there are any errors, write them
+			self.render_form(invalid_login)
+		#else, redirect to a welcome screen along with the regex sanitized username
+		else:
+			self.redirect('/welcome')
+
+class LogoutHandler(Handler):
+	def get(self):
+		user_cookie_str = self.request.cookies.get('name')
+		if user_cookie_str:
+			self.response.delete_cookie('name')
+			print valid_cookie(user_cookie_str)
+			self.redirect('/signup')
 
 class WelcomeHandler(Handler):
 	def get(self):
 		#decode cookie
-		user_cookie_str = self.request.cookies.get('user-id')
-		print user_cookie_str
+		user_cookie_str = self.request.cookies.get('name')
 		if user_cookie_str:
-			cookie_val = check_secure_val(user_cookie_str)
-			# print cookie_val
-			if cookie_val:
-				user = cookie_val
-				msg = "Welcome, %s" % user
-				#pass username to template
+			user = get_user(user_cookie_str)
+			if user:
+				msg = "Welcome, %s!" % user
 			else:
 				msg = "Whoops, something went wrong"
 			self.render("welcome.html", msg=msg)
 		else:
 			self.redirect('/signup')
-
 
 #####
 ##### Hashing Functions
@@ -145,49 +187,44 @@ class WelcomeHandler(Handler):
 
 SECRET = 'mysecret'
 
+def make_salt():
+	return ''.join(random.choice(string.letters) for x in xrange(5))
+
 def hash_str(s):
 	return hmac.new(SECRET, s).hexdigest()
 
-def make_secure_val(s):
-	return str(s) + '|' + hash_str(s)
+# def make_secure_val(s):
+# 	return str(s) + '|' + hash_str(s)
 
-def make_salt():
-    return ''.join(random.choice(string.letters) for x in xrange(5))
-
-def check_secure_val(h):
-	val = h.split('|')[0]
-	if h == make_secure_val(val):
-		return val
+# def check_secure_val(h):
+# 	val = h.split('|')[0]
+# 	s = h.split('|')[2]
+# 	print "val " + val
+# 	print "s " + s
+# 	if s == make_secure_val(val):
+# 		return val
 
 def make_pw_hash(name, pw, salt = None):
 	if not salt:
 		salt = make_salt()
 	h = hashlib.sha256(name + pw + salt).hexdigest()
-	return '%s|%s' % (name, h)
+	return '%s|%s|%s' % (name, salt, h)
 
 def valid_pw(name, pw, h):
+	# get the salt from the hash
 	salt = h.split('|')[1]
-	return h == make_pw_hash(name, pw, salt)
+	# combine the salt with the submitted name and pw
+	# if the existing cookie hash matches the hash derived from the new User/Password, then
+	# return the hash value
+	if h == make_pw_hash(name, pw, salt):
+		return h
 
+def get_user(cookie):
+	return cookie.split('|')[0]
 
-class CookieHandler(Handler):
+def valid_cookie(cookie):
+	return cookie and COOKIE_RE.match(cookie)
 
-	def get(self):
-		self.response.headers['Content-Type'] = 'text/plain'
-		visits = 0
-		visit_cookie_str = self.request.cookies.get('visits')
-		if visit_cookie_str:
-			cookie_val = check_secure_val(visit_cookie_str)
-			if cookie_val:
-				visits = int(cookie_val)
-
-		visits += 1
-
-		new_cookie_val = make_secure_val(str(visits))
-
-		self.response.headers.add_header('Set-Cookie', 'visits=%s' % new_cookie_val)
-		self.write("you've been here %s times!" % visits)
-		self.write("you've been here 0 times!")
 
 #####
 ##### Blog Pages
@@ -247,6 +284,8 @@ class Single(Handler):
 app = webapp2.WSGIApplication([
 	('/', BlogPage),
 	('/signup', SignupHandler),
+	('/login', LoginHandler),
+	('/logout', LogoutHandler),
 	('/welcome', WelcomeHandler),
 	('/newpost', NewPostForm),
 	('/(\d+)', Single) #lr somehow pass the id of the blog post here

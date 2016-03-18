@@ -4,11 +4,12 @@
 	<title>Udacity Shopping List</title>
 </head>
 <body>
-	<h1>Udacity Templates</h1>
+	<h1>Ascii Chan</h1>
 
 	<!-- {% block content %}
 	{% endblock %} -->
-	<form method="post">
+	<div class="container" style="width: 800px; height: 300px;">
+	<form method="post" style="float:left;display: inline-block;">
 		<label for="">
 			<div>title</div>
 			<input type="text" name="title" value="{{title}}">
@@ -22,9 +23,16 @@
 			{{error}}
 		</div>
 		<input type="submit" value="Submit">
-		</form>
-		<hr>
-		{% for art in arts %}
+	</form>
+	<div class="map" style="float:right">
+		{% if img_map %}
+			<img src="{{img_map}}"/>
+		{% endif %}
+	</div>
+	<div style="clear:left"></div>
+	</div>
+	<hr>
+	{% for art in arts %}
 		<div class="art">
 			<div class="art-title">
 				{{art.title}}
@@ -33,6 +41,6 @@
 				{{art.art}}
 			</pre>
 		</div>
-		{% endfor %}
+	{% endfor %}
 </body>
 </html>

@@ -8,13 +8,15 @@ from string import letters
 import webapp2
 import jinja2
 
+import json
+
 from google.appengine.ext import db
 
 template_dir = os.path.join(os.path.dirname(__file__), 'templates')
 jinja_env = jinja2.Environment(loader = jinja2.FileSystemLoader(template_dir),
                                autoescape = True)
 
-secret = 'fart'
+secret = 'sK)O4I]o7lU0>y#9lxd+h=<C[zI}M.KS`g>+;0h)DQ&RL?G02.)Je;]epq5eih^V'
 
 #render the template
 def render_str(template, **params):
@@ -30,6 +32,9 @@ def check_secure_val(secure_val):
     val = secure_val.split('|')[0]
     if secure_val == make_secure_val(val):
         return val
+
+def render_json(data):
+    return json.dumps(data)
 
 class BlogHandler(webapp2.RequestHandler):
     def write(self, *a, **kw):
@@ -167,10 +172,30 @@ class Post(db.Model):
         self._render_text = self.content.replace('\n', '<br>')
         return render_str("post.html", p = self)
 
+class DictModel(db.Model):
+    def to_dict(self):
+        return dict([(p, unicode(getattr(self, p))) for p in self.properties()])
+
+class Json(BlogHandler):
+    def get(self):
+        posts = Post.all().order('-created')
+        print dir(posts)
+        # print posts
+        # the_posts = []
+        for p in posts:
+            dir(p)
+        #     x = p.to_xml()
+        #     j = render_json(x)
+        #     the_posts.append(j)
+        #  def get(self):
+      # posts = Photo.all()
+        # self.write(json.dumps([p.to_dict() for p in posts]))
+
+
 class BlogFront(BlogHandler):
     def get(self):
         posts = greetings = Post.all().order('-created')
-        self.render('front.html', posts = posts)
+        self.render('recentposts.html', posts = posts)
 
 class PostPage(BlogHandler):
     def get(self, post_id):
@@ -181,7 +206,7 @@ class PostPage(BlogHandler):
             self.error(404)
             return
 
-        self.render("permalink.html", post = post)
+        self.render("single.html", post = post)
 
 class NewPost(BlogHandler):
     def get(self):
@@ -192,7 +217,7 @@ class NewPost(BlogHandler):
 
     def post(self):
         if not self.user:
-            self.redirect('/blog')
+            self.redirect('/')
 
         subject = self.request.get('subject')
         content = self.request.get('content')
@@ -200,7 +225,7 @@ class NewPost(BlogHandler):
         if subject and content:
             p = Post(parent = blog_key(), subject = subject, content = content)
             p.put()
-            self.redirect('/blog/%s' % str(p.key().id()))
+            self.redirect('/%s' % str(p.key().id()))
         else:
             error = "subject and content, please!"
             self.render("newpost.html", subject=subject, content=content, error=error)
@@ -222,7 +247,7 @@ def valid_email(email):
 
 class Signup(BlogHandler):
     def get(self):
-        self.render("signup-form.html")
+        self.render("signup.html")
 
     def post(self):
         have_error = False
@@ -250,18 +275,19 @@ class Signup(BlogHandler):
             have_error = True
 
         if have_error:
-            self.render('signup-form.html', **params)
+            self.render('signup.html', **params)
         else:
             self.done()
 
     def done(self, *a, **kw):
         raise NotImplementedError
 
-class Unit2Signup(Signup):
-    # Signup inherits from Bloghandler
-    # this done overrides the done method on signup. not used in final iteration of the blog
-    def done(self):
-        self.redirect('/unit2/welcome?username=' + self.username)
+
+# class Unit2Signup(Signup):
+#     # Signup inherits from Bloghandler
+#     # this done overrides the done method on signup. not used in final iteration of the blog
+#     def done(self):
+#         self.redirect('/unit2/welcome?username=' + self.username)
 
 class Register(Signup):
     # Signup inherits from Bloghandler
@@ -270,18 +296,18 @@ class Register(Signup):
         u = User.by_name(self.username)
         if u:
             msg = 'That user already exists.'
-            self.render('signup-form.html', error_username = msg)
+            self.render('signup.html', error_username = msg)
         else:
             u = User.register(self.username, self.password, self.email)
             u.put()
 
             # after registering, immediately log in
             self.login(u)
-            self.redirect('/blog')
+            self.redirect('/welcome')
 
 class Login(BlogHandler):
     def get(self):
-        self.render('login-form.html')
+        self.render('login.html')
 
     def post(self):
         username = self.request.get('username')
@@ -293,14 +319,14 @@ class Login(BlogHandler):
             self.redirect('/blog')
         else:
             msg = 'Invalid login'
-            self.render('login-form.html', error = msg)
+            self.render('login.html', error = msg)
 
 class Logout(BlogHandler):
     def get(self):
         self.logout()
-        self.redirect('/blog')
+        self.redirect('/')
 
-class Unit3Welcome(BlogHandler):
+class Welcome(BlogHandler):
     def get(self):
         if self.user: #user is set up in the BlogHandler initialize function
             self.render('welcome.html', username = self.user.name)
@@ -315,16 +341,17 @@ class Unit3Welcome(BlogHandler):
 #         else:
 #             self.redirect('/unit2/signup')
 
-app = webapp2.WSGIApplication([('/', MainPage),
+app = webapp2.WSGIApplication([
                                # ('/unit2/rot13', Rot13),
                                # ('/unit2/signup', Unit2Signup),
                                # ('/unit2/welcome', Welcome),
-                               ('/blog/?', BlogFront),
-                               ('/blog/([0-9]+)', PostPage),
-                               ('/blog/newpost', NewPost),
+                               ('/?', BlogFront),
+                               ('/([0-9]+)', PostPage),
+                               ('/newpost', NewPost),
                                ('/signup', Register),
                                ('/login', Login),
                                ('/logout', Logout),
-                               ('/unit3/welcome', Unit3Welcome),
+                               ('/welcome', Welcome),
+                               ('/.json', Json)
                                ],
                               debug=True)
